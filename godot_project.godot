@@ -1,0 +1,24 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go into it are too numerous
+; and some of them are loss-inducing if modified incorrectly.
+
+config_version=5
+
+[application]
+
+config/name="Desktop Cat"
+config/version="1.0.0"
+config/description="A cute desktop virtual pet cat game"
+config/icon="res://assets/icon.svg"
+
+[display]
+
+window/size/viewport_width=800
+window/size/viewport_height=600
+window/dpi/allow_hidpi=true
+window/per_pixel_transparency/allowed=true
+
+[physics]
+
+2d/physics_engine="GodotPhysics2D"
