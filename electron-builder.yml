@@ -1,0 +1,29 @@
+appId: com.desktopcat.app
+productName: Desktop Cat
+directories:
+  buildResources: assets
+files:
+  - dist
+  - node_modules
+  - src/main.ts
+  - src/preload.ts
+  - package.json
+win:
+  target:
+    - nsis
+    - portable
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+mac:
+  target:
+    - dmg
+    - zip
+  category: public.app-category.games
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Game

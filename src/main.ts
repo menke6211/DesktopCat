@@ -8,16 +8,14 @@ const stateManager = new CatStateManager();
 
 const createWindow = () => {
   mainWindow = new BrowserWindow({
-    width: 200,
-    height: 200,
-    transparent: true,
-    frame: false,
-    alwaysOnTop: true,
+    width: 400,
+    height: 600,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
     },
+    icon: path.join(__dirname, '../assets/icon.png'),
   });
 
   const startUrl = isDev
@@ -49,7 +47,7 @@ app.on('activate', () => {
   }
 });
 
-// IPC handlers for state management
+// IPC handlers
 ipcMain.handle('get-cat-state', async () => {
   return stateManager.getState();
 });
@@ -69,4 +67,8 @@ ipcMain.handle('play-with-cat', async () => {
 
 ipcMain.handle('sleep-cat', async () => {
   return stateManager.sleepCat();
+});
+
+ipcMain.handle('groom-cat', async () => {
+  return stateManager.groomCat();
 });

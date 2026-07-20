@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   feedCat: () => ipcRenderer.invoke('feed-cat'),
   playCat: () => ipcRenderer.invoke('play-with-cat'),
   sleepCat: () => ipcRenderer.invoke('sleep-cat'),
+  groomCat: () => ipcRenderer.invoke('groom-cat'),
 });

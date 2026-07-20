@@ -1,26 +1,20 @@
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
-
-interface CatState {
-  x: number;
-  y: number;
-  hunger: number;
-  energy: number;
-  happiness: number;
-  mood: 'happy' | 'hungry' | 'sleepy' | 'playing';
-  lastFed: number;
-  lastPlayed: number;
-}
+import type { CatState, Vector2 } from '../types';
+import { CatBehavior } from './catBehavior';
 
 export class CatStateManager {
   private stateFile: string;
   private state: CatState;
+  private behavior: CatBehavior;
+  private updateTimer: NodeJS.Timer | null = null;
 
   constructor() {
     const userDataPath = app.getPath('userData');
     this.stateFile = path.join(userDataPath, 'cat-state.json');
     this.state = this.loadStateFromFile();
+    this.behavior = new CatBehavior();
   }
 
   private loadStateFromFile(): CatState {
@@ -37,15 +31,21 @@ export class CatStateManager {
   }
 
   private getDefaultState(): CatState {
+    const now = Date.now();
     return {
-      x: 100,
-      y: 100,
+      position: { x: 100, y: 100 },
+      direction: 'down',
       hunger: 50,
       energy: 70,
       happiness: 60,
+      health: 100,
       mood: 'happy',
-      lastFed: Date.now(),
-      lastPlayed: Date.now(),
+      currentAction: 'idle',
+      lastFed: now,
+      lastPlayed: now,
+      lastSlept: now,
+      level: 1,
+      experience: 0
     };
   }
 
@@ -68,30 +68,17 @@ export class CatStateManager {
       this.state.mood = 'sleepy';
     } else if (this.state.happiness > 75) {
       this.state.mood = 'happy';
+    } else if (this.state.happiness < 30) {
+      this.state.mood = 'angry';
     } else {
       this.state.mood = 'happy';
     }
   }
 
   getState(): CatState {
-    // Simulate state changes over time
-    const now = Date.now();
-    const timeSinceLastFed = (now - this.state.lastFed) / 1000; // in seconds
-    const timeSinceLastPlayed = (now - this.state.lastPlayed) / 1000;
-
-    // Hunger increases over time
-    this.state.hunger = Math.min(100, this.state.hunger + timeSinceLastFed * 0.01);
-
-    // Energy decreases over time if not sleeping
-    if (this.state.mood !== 'sleepy') {
-      this.state.energy = Math.max(0, this.state.energy - timeSinceLastPlayed * 0.005);
-    }
-
-    // Happiness decreases if hungry or tired
-    if (this.state.hunger > 70 || this.state.energy < 30) {
-      this.state.happiness = Math.max(0, this.state.happiness - 0.1);
-    }
-
+    // 應用自動行為更新
+    const behaviorUpdates = this.behavior.update(this.state, 16);
+    Object.assign(this.state, behaviorUpdates);
     this.updateMood();
     return this.state;
   }
@@ -103,9 +90,15 @@ export class CatStateManager {
   }
 
   feedCat(): CatState {
-    this.state.hunger = Math.max(0, this.state.hunger - 30);
-    this.state.happiness = Math.min(100, this.state.happiness + 10);
+    if (this.state.hunger < 10) {
+      this.state.health = Math.max(0, this.state.health - 5);
+    }
+
+    this.state.hunger = Math.max(0, this.state.hunger - 40);
+    this.state.happiness = Math.min(100, this.state.happiness + 15);
     this.state.lastFed = Date.now();
+    this.state.currentAction = 'eat';
+    this.state.experience = Math.min(999, this.state.experience + 10);
     this.updateMood();
     this.saveStateToFile();
     return this.state;
@@ -114,25 +107,49 @@ export class CatStateManager {
   playCat(): CatState {
     if (this.state.energy < 20) {
       this.state.happiness = Math.max(0, this.state.happiness - 10);
+      this.state.health = Math.max(0, this.state.health - 5);
       return this.state;
     }
 
-    this.state.energy = Math.max(0, this.state.energy - 25);
-    this.state.happiness = Math.min(100, this.state.happiness + 20);
-    this.state.hunger = Math.min(100, this.state.hunger + 5);
+    this.state.energy = Math.max(0, this.state.energy - 30);
+    this.state.happiness = Math.min(100, this.state.happiness + 25);
+    this.state.hunger = Math.min(100, this.state.hunger + 10);
     this.state.lastPlayed = Date.now();
-    this.state.mood = 'playing';
+    this.state.currentAction = 'play';
+    this.state.experience = Math.min(999, this.state.experience + 20);
     this.updateMood();
     this.saveStateToFile();
     return this.state;
   }
 
   sleepCat(): CatState {
+    this.state.currentAction = 'sleep';
+    this.state.energy = Math.min(100, this.state.energy + 60);
+    this.state.happiness = Math.min(100, this.state.happiness + 10);
+    this.state.lastSlept = Date.now();
     this.state.mood = 'sleepy';
-    this.state.energy = Math.min(100, this.state.energy + 50);
+    this.saveStateToFile();
+    return this.state;
+  }
+
+  groomCat(): CatState {
+    this.state.currentAction = 'groom';
+    this.state.health = Math.min(100, this.state.health + 20);
     this.state.happiness = Math.min(100, this.state.happiness + 5);
+    this.state.experience = Math.min(999, this.state.experience + 5);
     this.updateMood();
     this.saveStateToFile();
+    return this.state;
+  }
+
+  updatePosition(x: number, y: number): CatState {
+    this.state.position = { x, y };
+    this.saveStateToFile();
+    return this.state;
+  }
+
+  updateDirection(direction: 'up' | 'down' | 'left' | 'right'): CatState {
+    this.state.direction = direction;
     return this.state;
   }
 }
